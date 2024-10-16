@@ -10,6 +10,7 @@ const figlet = require('figlet');
 const ora = require('ora');
 
 const packageJson = require('./package.json');
+const git = simpleGit();
 
 function showHeader() {
   console.log(
@@ -32,6 +33,30 @@ function showTips(projectName) {
   console.log(chalk.yellow('\nHappy coding! 💻🚀'));
 }
 
+async function createHiddenFile(projectPath){
+  // file names startting with . are hidden in Unix-based systems
+  const hiddenFilePath = path.join(projectPath, '.ntw_identifier'); 
+
+  try {
+    fs.writeFileSync(hiddenFilePath, "This project was created with NTW CLI.");
+
+    if (process.platform == path.win32) {
+      exec(`attrib + h ${hiddenFilePath}`, (error) => {
+        if(error) {
+          console.log('Error when setting file as hidden on Windows:', error)
+        }
+      })
+    }
+
+    await git.add(hiddenFilePath);
+
+  } catch(err) {
+    console.error(chalk.red('Error creating NTW identifier:', err));
+    return;
+  }
+
+}
+
 program
   .version(packageJson.version)
   .description('NTW CLI - Node TypeScript Wizard');
@@ -43,7 +68,6 @@ program
     showHeader();
 
     const projectPath = path.join(process.cwd(), projectName);
-    const git = simpleGit();
     const spinner = ora(`Setting up your project: ${projectName}...`).start();
 
     git.clone('https://github.com/fless-lab/ntw-init.git', projectPath)
@@ -69,6 +93,9 @@ program
           installSpinner.succeed('Step 1/2: All dependencies have been installed successfully.');
 
           installSpinner.start('Step 2/2: Finalizing project setup...');
+
+          createHiddenFile(projectPath);
+
           setTimeout(() => {
             installSpinner.succeed('Step 2/2: Project setup completed.');
 
