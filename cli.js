@@ -58,11 +58,12 @@ async function createHiddenFile(projectPath){
 }
 
 program
-  .version(packageJson.version)
+  .version(packageJson.version, '-v, --version', 'output the current version')
   .description('NTW CLI - Node TypeScript Wizard');
 
 program
   .command('init [projectName]')
+  .alias('i')
   .description('Initialize a new project with TypeScript support')
   .action((projectName = 'new-ntw-project') => {
     showHeader();
@@ -115,5 +116,33 @@ program
         console.error(chalk.red('Error:', err));
       });
   });
+
+program
+  .command('generate <type> [name]')
+  .aliases(['g', 'gen'])
+  .description('Generate a new application with TypeScript scaffolding.')
+  .action((name = 'new-ntw-application') => {
+    const typeMapping = {
+      application: 'application',
+      a: 'application', // Alias for 'application'
+    }
+
+    // Check if the provided type matches one of the aliases or full forms
+    const normalizedType = typeMapping[type] || type;
+
+    if (normalizedType === 'application') {
+      console.log(`Generating application named: ${name}`);
+    } 
+
+  });
+
+program.on('--help', () => {
+  console.log('');
+  console.log('Example call:');
+  console.log('  $ ntw init demo');
+  console.log('');
+  console.log('Additional Information:');
+  console.log('  Ensure that ntw.json is present in order for commands like `ntw generate [appName]` to work.');
+});
 
 program.parse(process.argv);
