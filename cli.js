@@ -8,6 +8,7 @@ const fs = require('fs');
 const chalk = require('chalk');
 const figlet = require('figlet');
 const ora = require('ora');
+const { createFolderStructure } = require('./add-cli');
 
 const packageJson = require('./package.json');
 const git = simpleGit();
@@ -33,29 +34,60 @@ function showTips(projectName) {
   console.log(chalk.yellow('\nHappy coding! 💻🚀'));
 }
 
-async function createHiddenFile(projectPath){
-  // file names startting with . are hidden in Unix-based systems
-  const hiddenFilePath = path.join(projectPath, '.ntw_identifier'); 
+function encode(identifier) {
+  return Buffer.from(identifier).toString('base64');
+}
+
+function decode(encodedIdentifier) {
+  // Convert the Base64 encoded string back to its original form
+  return Buffer.from(encodedIdentifier, 'base64').toString('utf-8');
+}
+
+function isNtwProject(projectPath) {
+  // Check if the encoded id from the config contains our identifier.
+  const configFilePath = path.join(projectPath, 'ntw.config.json');
+  const data = fs.readFileSync(configFilePath, 'utf-8');
+  const config = JSON.parse(data);
+
+  const decodedIdentifier = decode(config.id);
+
+  if (decodedIdentifier.includes('was made with NTW on')) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+async function createConfigFile(projectPath, projectName){
+  const date = new Date().toUTCString();
+  const identifier = `${projectName} was made with NTW on ${date}`; 
+  const encodedIdentifier = encode(identifier)
+
+  const config = {
+    name: projectName,
+    "id": encodedIdentifier,
+    "apps-path": "./src/apps",
+    dateCreated: date,
+  };
+
+  const configFilePath = path.join(projectPath, 'ntw.config.json');
 
   try {
-    fs.writeFileSync(hiddenFilePath, "This project was created with NTW CLI.");
+    fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
 
-    if (process.platform == path.win32) {
-      exec(`attrib + h ${hiddenFilePath}`, (error) => {
-        if(error) {
-          console.log('Error when setting file as hidden on Windows:', error)
-        }
-      })
-    }
-
-    await git.add(hiddenFilePath);
+    await git.add(configFilePath);
 
   } catch(err) {
-    console.error(chalk.red('Error creating NTW identifier:', err));
+    console.error(chalk.red('Error creating config file:', err));
     return;
   }
 
 }
+
+module.exports = {
+  createConfigFile,
+  encode,
+};
 
 program
   .version(packageJson.version, '-v, --version', 'output the current version')
@@ -95,7 +127,7 @@ program
 
           installSpinner.start('Step 2/2: Finalizing project setup...');
 
-          createHiddenFile(projectPath);
+          createConfigFile(projectPath, projectName)
 
           setTimeout(() => {
             installSpinner.succeed('Step 2/2: Project setup completed.');
@@ -120,18 +152,47 @@ program
 program
   .command('generate <type> [name]')
   .aliases(['g', 'gen'])
-  .description('Generate a new application with TypeScript scaffolding.')
-  .action((name = 'new-ntw-application') => {
+  .description('Generate a new resource (e.g. an application) with TypeScript scaffolding.\n\n',
+                'Type can be one of:\n' +
+               '  - application: Generate a new application structure\n' +
+
+               'Example:\n' +
+               '  $ ntw g application MyApp\n' +
+               'Ensure that you call this from the root of a NTW project with a valid ntw.config.json file.')
+  .action((type, name = 'new-ntw-resource') => {
+
     const typeMapping = {
       application: 'application',
-      a: 'application', // Alias for 'application'
+      // Aliases for 'application'
+      a: 'application', 
+      app: 'application', 
     }
 
     // Check if the provided type matches one of the aliases or full forms
     const normalizedType = typeMapping[type] || type;
 
     if (normalizedType === 'application') {
-      console.log(`Generating application named: ${name}`);
+      const genAppSpinner = ora('Generating a new NTW application.').start();
+      var isNtw;
+
+      try {
+        isNtw = isNtwProject(process.cwd());
+      } catch(error) {
+        genAppSpinner.fail('Failed to generate a new NTW application.');
+        console.error(chalk.red(`Error: ${error}\n\n` + "Please ensure you execute this command at the root of an NTW project with a valid ntw.config.json file."));
+        return;
+      }
+
+      if(!isNtw){
+        genAppSpinner.fail('Failed to generate a new NTW application.');
+        console.error(chalk.red(`Error: Current directory is not a NTW project. Please execute this command at the root of an NTW project with a valid ntw.config.json file.`));
+      }
+
+      genAppSpinner.text = 'Creating folder structure...'
+
+      createFolderStructure(process.cwd(), name);
+
+      genAppSpinner.succeed(`New ${name} NTW Application sucessfully generated.`)
     } 
 
   });

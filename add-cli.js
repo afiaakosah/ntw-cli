@@ -17,29 +17,15 @@ function prepareTemplate(name, relativeTemplateFilePath){
 	  console.error(`Error reading template file: ${fullTemplateFilePath}`);
 	  return
 	}
-  
-	// Replace "todo" with the provided name in the template
-	templateContent = templateContent.replace(/todo/g, name);  
+
 	return templateContent;
 }
 
 // Create a folder structure with the given name
 const createFolderStructure = (projectPath, name) => {
 	const lowerCaseName = name.toLowerCase();
-	const appsPath = projectPath + "/apps";
+	const appsPath = projectPath + "/src/apps";
 	const baseDir = path.join(appsPath, lowerCaseName);
-
-
-	
-	// Define the folder structure
-	const folders = [
-		path.join(baseDir, 'controllers'),
-		path.join(baseDir, 'models'),
-		path.join(baseDir, 'repositories'),
-		path.join(baseDir, 'routes'),
-		path.join(baseDir, 'services'),
-		path.join(baseDir, 'types')
-	];
 
 	const files = {
 		[path.join(baseDir, 'README.md')]: `# ${name}\n\nThis is the README for the ${name} application.`,
@@ -58,32 +44,26 @@ const createFolderStructure = (projectPath, name) => {
 		[path.join(baseDir, 'types', `${lowerCaseName}.ts`)]: `// Type definitions for ${name}`
 	};
 
-	const addProjectSpinner = ora('Creating folders...').start();
-
-	// // Create folders
-	// folders.forEach((folder) => {
-	// 	if (!fs.existsSync(folder)) {
-	// 	fs.mkdirSync(folder, { recursive: true });
-	// 	console.log(`Created folder: ${folder}`);
-	// 	}
-	// });
-
-	addProjectSpinner.start('Creating files and adding template.');
+	const addProjectSpinner = ora('Creating files and adding template...\n\n').start();
 
 	// Create files with content
 	Object.entries(files).forEach(([filePath, content]) => {
-		const updatedContent = content.replace(/todo/g, name);
-		fs.writeFileSync(filePath, updatedContent);
-		console.log(chalk.green('CREATE') +`${filePath}`);
+		// Ensure the directory exists
+		const dirPath = path.dirname(filePath);
+		if (!fs.existsSync(dirPath)) {
+		  fs.mkdirSync(dirPath, { recursive: true });
+		  console.log(chalk.green('CREATE ') + `${dirPath}`);
+		}
+
+		fs.writeFileSync(filePath, content);
 	});
 
-	addProjectSpinner.succeed(`Additional project, ${name}, has been setup successfully.`);
+	addProjectSpinner.succeed(`Additional ${name} application has been setup successfully.`);
 }
 
 module.exports = {
     createFolderStructure
 };
-
 
 // Parse command-line arguments
 program.parse(process.argv);
