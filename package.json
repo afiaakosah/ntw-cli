@@ -2,6 +2,7 @@
   "name": "@fless-lab/ntw-cli",
   "version": "1.0.6",
   "description": "Node TypeScript Wizard - CLI for scaffolding API applications",
+  "type": "module",
   "main": "cli.js",
   "bin": {
     "ntw": "./cli.js"
@@ -14,10 +15,15 @@
     "access": "public"
   },
   "dependencies": {
-    "commander": "^8.0.0",
-    "simple-git": "^2.0.0",
     "chalk": "^4.0.0",
+    "commander": "^8.0.0",
     "figlet": "^1.5.0",
-    "ora": "^5.4.0"
+    "ora": "^5.4.0",
+    "simple-git": "^2.0.0",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^22.7.8"
   }
 }
